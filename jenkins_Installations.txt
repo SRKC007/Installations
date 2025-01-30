@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# Script to install Jenkins on Ubuntu EC2 Instance
+# Author: SivaRamaKrishna Guntamukkala
+# Version: 1.0
+
+echo "Step 1: Updating system package list..."
+sudo apt update
+
+echo "Step 2: Installing Java (Required for Jenkins)..."
+# Jenkins requires Java 11 or newer. Installing OpenJDK 17.
+sudo apt install -y fontconfig openjdk-17-jre
+
+echo "Step 3: Verifying Java installation..."
+java -version
+
+echo "Step 4: Adding Jenkins repository..."
+# Jenkins is not available in the default Ubuntu repository. We need to add the official Jenkins repo.
+
+# Download and add the Jenkins GPG key
+sudo wget -O /usr/share/keyrings/jenkins-keyring.asc \
+https://pkg.jenkins.io/debian/jenkins.io-2023.key
+
+# If the above command gives "Permission Denied", try:
+#wget -O ~/jenkins-keyring.asc https://pkg.jenkins.io/debian/jenkins.io-2023.key
+#sudo mv ~/jenkins-keyring.asc /usr/share/keyrings/
+
+echo "Step 5: Adding Jenkins package repository to system sources..."
+# Add the official Jenkins repository to system sources
+echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian binary/" | sudo tee /etc/apt/sources.list.d/jenkins.list > /dev/null
+
+echo "Step 6: Updating package list after adding Jenkins repository..."
+sudo apt update
+
+echo "Step 7: Installing Jenkins..."
+sudo apt install -y jenkins
+
+echo "Step 8: Enabling and starting Jenkins service..."
+# Enable Jenkins to start at boot and start it immediately
+sudo systemctl enable --now jenkins
+
+echo "Step 9: Checking Jenkins service status..."
+sudo systemctl status jenkins
+
+echo "Step 10: Allowing Jenkins traffic on port 8080 in UFW Firewall (Optional)"
+sudo ufw allow 8080
+
+echo "Step 11: Retrieving Jenkins default admin password..."
+sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+
+echo "Modifying security group: $SECURITY_GROUP_ID"
+aws ec2 authorize-security-group-ingress --group-id $SECURITY_GROUP_ID --protocol tcp --port 8080 --cidr 0.0.0.0/0
+
+echo "Step 12: Access Jenkins at http://<your-ec2-public-ip>:8080"
+echo "Replace <your-ec2-public-ip> with the public IP of your EC2 instance."
+
+echo "Jenkins installation and setup completed successfully!"
+
